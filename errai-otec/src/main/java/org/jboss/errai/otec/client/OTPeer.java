@@ -27,5 +27,5 @@ public interface OTPeer {
   public void send(OTOperation operation);
   public void beginSyncRemoteEntity(String peerId, int entityId, EntitySyncCompletionCallback<State> callback);
   public int getLastKnownRemoteSequence(Integer entity);
-  public int getLastTransmittedSequence(Integer entity);
+  public String getLastTransmittedHash(Integer entity);
 }

@@ -32,7 +32,7 @@ import java.util.Map;
 public abstract class AbstractMockPeer implements OTPeer {
   protected OTEngine localEngine;
   protected OTEngine remoteEngine;
-  protected final Map<Integer, Integer> lastTransmittedSequencees = new HashMap<Integer, Integer>();
+  protected final Map<Integer, String> lastTransmittedSequencees = new HashMap<Integer, String>();
 
 
   @Override
@@ -46,9 +46,8 @@ public abstract class AbstractMockPeer implements OTPeer {
   }
 
   @Override
-  public int getLastTransmittedSequence(final Integer entity) {
-    final Integer integer = lastTransmittedSequencees.get(entity);
-    return integer == null ? 0 : integer;
+  public String getLastTransmittedHash(final Integer entity) {
+    return lastTransmittedSequencees.get(entity);
   }
 
 

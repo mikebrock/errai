@@ -63,7 +63,7 @@ public class Transformer {
   @SuppressWarnings("unchecked")
   public OTOperation transform() {
     final TransactionLog transactionLog = entity.getTransactionLog();
-    final List<OTOperation> localOps = transactionLog.getLogFromId(remoteOp.getRevision(), false);
+    final List<OTOperation> localOps = transactionLog.getLogFromHash(remoteOp.getRevisionHash(), false);
 
     if (localOps.isEmpty()) {
       OTOperationImpl.createOperation(remoteOp).apply(entity);
@@ -71,7 +71,7 @@ public class Transformer {
     }
     else {
       if (localOps.size() > 1) {
-        entity.getState().syncStateFrom(transactionLog.getEffectiveStateForRevision(remoteOp.getRevision() + 1));
+        entity.getState().syncStateFrom(transactionLog.getEffectiveStateForRevision(remoteOp.getRevisionHash(), 1));
 
         assert OTLogUtil.log("REWIND",
             "<<>>",
@@ -167,7 +167,7 @@ public class Transformer {
               // to the beginning of the delete range to resolve this.
 
               final State rewind
-                  = transactionLog.getEffectiveStateForRevision(localOp.getRevision());
+                  = transactionLog.getEffectiveStateForRevision(localOp.getRevisionHash(), 0);
               localOp.removeFromCanonHistory();
               transactionLog.markDirty();
               final Mutation mutation = lm.newBasedOn(rm.getPosition());
@@ -234,7 +234,7 @@ public class Transformer {
               if (lm.getType() == MutationType.Delete) {
                 if (remoteWins && (lm.getPosition() + lm.length()) > rm.getPosition()) {
                   final State rewind
-                      = transactionLog.getEffectiveStateForRevision(localOp.getRevision());
+                      = transactionLog.getEffectiveStateForRevision(localOp.getRevisionHash(), 0);
                   final Mutation mutation = rm.newBasedOn(lm.getPosition());
                   //transactionLog.pruneFromOperation(localOp);
 
@@ -261,7 +261,7 @@ public class Transformer {
               if (lm.getType() == MutationType.Delete) {
                 if (remoteWins && (lm.getPosition() + lm.length()) > rm.getPosition()) {
                   final State rewind
-                      = transactionLog.getEffectiveStateForRevision(localOp.getRevision());
+                      = transactionLog.getEffectiveStateForRevision(localOp.getRevisionHash(), 0);
 
                   rm.apply(rewind);
 

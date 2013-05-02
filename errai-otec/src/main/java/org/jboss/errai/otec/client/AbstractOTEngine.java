@@ -208,9 +208,15 @@ public abstract class AbstractOTEngine implements OTEngine {
 
         final TransactionLog transactionLog = entity.getTransactionLog();
         synchronized (transactionLog.getLock()) {
-          final Collection<OTOperation> log
-              = transactionLog.getLogFromId(peer.getLastTransmittedSequence(entry.getKey()), true);
+          final String lastTransmittedHash = peer.getLastTransmittedHash(entry.getKey());
+          final Collection<OTOperation> log;
 
+          if (lastTransmittedHash == null) {
+            log = transactionLog.getLog();
+          }
+          else {
+            log = transactionLog.getLogFromHash(lastTransmittedHash, true);
+          }
           for (final OTOperation op : log) {
             if (getPeerState().shouldForwardOperation(op)) {
               peer.send(op);

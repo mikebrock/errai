@@ -41,7 +41,7 @@ public class TransactionLogImpl implements TransactionLog {
 
   private TransactionLogImpl(final OTEntity entity) {
     this.entity = entity;
-    stateSnapshots.add(new StateSnapshot(entity.getRevision(), entity.getState().snapshot()));
+    stateSnapshots.add(new StateSnapshot(entity.getState().getHash(), entity.getState().snapshot()));
   }
 
   public static TransactionLog createTransactionLog(final OTEntity entity) {
@@ -78,7 +78,7 @@ public class TransactionLogImpl implements TransactionLog {
   }
 
   @Override
-  public List<OTOperation> getLogFromId(final int revision, boolean includeNonCanon) {
+  public List<OTOperation> getLogFromHash(final String hash, boolean includeNonCanon) {
     synchronized (lock) {
       if (transactionLog.isEmpty()) {
         return Collections.emptyList();
@@ -93,18 +93,20 @@ public class TransactionLogImpl implements TransactionLog {
           continue;
         }
         operationList.add(previous);
-        if (previous.getRevision() == revision) {
+        if (previous.getRevisionHash().equals(hash)) {
           Collections.reverse(operationList);
           return operationList;
         }
       }
 
-      if ((revision - 1) == transactionLog.get(transactionLog.size() - 1).getRevision()) {
-        return Collections.emptyList();
-      }
-      else {
-        throw new OTException("unable to find revision in log: " + revision);
-      }
+      return transactionLog;
+
+//      if ((hash - 1) == transactionLog.get(transactionLog.size() - 1).getRevision()) {
+//        return Collections.emptyList();
+//      }
+//      else {
+   // throw new OTException("unable to find hash in log: " + hash);
+//      }
     }
   }
 
@@ -128,7 +130,7 @@ public class TransactionLogImpl implements TransactionLog {
 
   @SuppressWarnings("unchecked")
   @Override
-  public State getEffectiveStateForRevision(final int revision) {
+  public State getEffectiveStateForRevision(final String revision, int delta) {
     synchronized (lock) {
       final StateSnapshot latestSnapshotState = getLatestParentSnapshot(revision);
       final State stateToTranslate = latestSnapshotState.getState().snapshot();
@@ -136,7 +138,7 @@ public class TransactionLogImpl implements TransactionLog {
           = transactionLog.listIterator(transactionLog.size());
 
       while (operationListIterator.hasPrevious()) {
-        if (operationListIterator.previous().getRevision() == latestSnapshotState.getRevision()) {
+        if (operationListIterator.previous().getRevisionHash().equals(latestSnapshotState.getHash())) {
           break;
         }
       }
@@ -145,10 +147,18 @@ public class TransactionLogImpl implements TransactionLog {
         final OTOperation op = operationListIterator.next();
         if (!op.isCanon()) continue;
 
-        if (op.getRevision() < revision) {
-          for (final Mutation mutation : op.getMutations()) {
-            mutation.apply(stateToTranslate);
-          }
+        if (op.getRevisionHash().equals(revision)) {
+          break;
+        }
+
+        for (final Mutation mutation : op.getMutations()) {
+          mutation.apply(stateToTranslate);
+        }
+      }
+
+      for (; delta > 0 && operationListIterator.hasNext(); delta--) {
+        for (final Mutation mutation : operationListIterator.next().getMutations()) {
+          mutation.apply(stateToTranslate);
         }
       }
 
@@ -157,23 +167,25 @@ public class TransactionLogImpl implements TransactionLog {
     }
   }
 
-  private StateSnapshot getLatestParentSnapshot(final int revision) {
+  private StateSnapshot getLatestParentSnapshot(final String hash) {
     synchronized (lock) {
       final ListIterator<StateSnapshot> snapshotListIterator = stateSnapshots.listIterator(stateSnapshots.size());
 
       while (snapshotListIterator.hasPrevious()) {
         final StateSnapshot stateSnapshot = snapshotListIterator.previous();
-        if (stateSnapshot.getRevision() <= revision) {
+        if (stateSnapshot.getHash().equals(hash)) {
           return stateSnapshot;
         }
       }
 
-      throw new RuntimeException("no parent state for: " + revision);
+      return stateSnapshots.iterator().next();
+
+   //   throw new RuntimeException("no parent state for: " + hash);
     }
   }
 
-  private void makeSnapshot(final int revision, final State state) {
-    stateSnapshots.add(new StateSnapshot(revision, state));
+  private void makeSnapshot(final String hash, final State state) {
+    stateSnapshots.add(new StateSnapshot(hash, state));
   }
 
   @Override
@@ -199,6 +211,7 @@ public class TransactionLogImpl implements TransactionLog {
           break;
         }
       }
+
     }
   }
 
@@ -228,16 +241,16 @@ public class TransactionLogImpl implements TransactionLog {
   }
 
   private static class StateSnapshot {
-    private final int revision;
+    private final String hash;
     private final State state;
 
-    private StateSnapshot(final int revision, final State state) {
-      this.revision = revision;
+    private StateSnapshot(final String revision, final State state) {
+      this.hash = revision;
       this.state = state;
     }
 
-    private int getRevision() {
-      return revision;
+    private String getHash() {
+      return hash;
     }
 
     private State getState() {

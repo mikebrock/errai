@@ -27,7 +27,6 @@ import org.jboss.errai.otec.client.operation.OTOperation;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Mike Brock
@@ -35,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ServerOTPeerImpl implements OTPeer {
   private final String queueId;
   private final MessageBus bus;
-  private final Map<Integer, AtomicInteger> lastSentSequences = new ConcurrentHashMap<Integer, AtomicInteger>();
+  private final Map<Integer, String> lastSentSequences = new ConcurrentHashMap<Integer, String>();
 
   public ServerOTPeerImpl(String remoteEngineId, MessageBus bus) {
     this.queueId = remoteEngineId;
@@ -55,11 +54,8 @@ public class ServerOTPeerImpl implements OTPeer {
         .set(MessageParts.SessionID, queueId)
         .sendNowWith(bus);
 
-    AtomicInteger atomicInteger = lastSentSequences.get(operation.getEntityId());
-    if (atomicInteger == null) {
-      lastSentSequences.put(operation.getEntityId(), atomicInteger = new AtomicInteger());
-    }
-    atomicInteger.set(operation.getRevision());
+
+    lastSentSequences.put(operation.getEntityId(), operation.getRevisionHash());
   }
 
   @Override
@@ -72,8 +68,7 @@ public class ServerOTPeerImpl implements OTPeer {
   }
 
   @Override
-  public int getLastTransmittedSequence(Integer entity) {
-    final AtomicInteger seq = lastSentSequences.get(entity);
-    return seq == null ? 0 : seq.get();
+  public String getLastTransmittedHash(Integer entity) {
+    return lastSentSequences.get(entity);
   }
 }

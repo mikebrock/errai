@@ -29,15 +29,15 @@ public interface TransactionLog {
 
   public List<OTOperation> getLog();
 
-  public List<OTOperation> getLogFromId(int revision, boolean includeNonCanon);
+  public List<OTOperation> getLogFromHash(String hash, boolean includeNonCanon);
 
   public List<OTOperation> getCanonLog();
 
-  public void insertLog(int revision, OTOperation operation);
+  public void insertLog(int hash, OTOperation operation);
 
   public void appendLog(OTOperation operation);
 
-  State getEffectiveStateForRevision(int revision);
+  State getEffectiveStateForRevision(String hash, int delta);
 
   void pruneFromOperation(OTOperation operation);
 

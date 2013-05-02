@@ -20,7 +20,6 @@ import org.jboss.errai.otec.client.OTEngine;
 import org.jboss.errai.otec.client.operation.OTOperation;
 import org.jboss.errai.otec.client.operation.OTOperationImpl;
 import org.jboss.errai.otec.client.util.OTLogUtil;
-import org.jboss.errai.otec.harness.OTTestingLogger;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -70,7 +69,7 @@ public class AsynchronousMockPeerlImpl extends AbstractMockPeer {
 
     remoteEngine.receive(localEngine.getId(), OTOperationImpl.createLocalOnlyOperation(remoteEngine, operation));
 
-    lastTransmittedSequencees.put(operation.getEntityId(), operation.getRevision());
+    lastTransmittedSequencees.put(operation.getEntityId(), operation.getRevisionHash());
   }
 
   @Override

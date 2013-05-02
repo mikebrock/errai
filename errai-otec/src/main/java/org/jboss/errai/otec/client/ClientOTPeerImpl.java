@@ -34,7 +34,7 @@ public class ClientOTPeerImpl implements OTPeer {
   private final String id = "<ServerEngine>";
   private final MessageBus bus;
   private final OTEngine engine;
-  private final Map<Integer, Integer> lastSentSequences = new HashMap<Integer, Integer>();
+  private final Map<Integer, String> lastSentSequences = new HashMap<Integer, String>();
 
 
   public ClientOTPeerImpl(MessageBus bus, OTEngine engine) {
@@ -54,7 +54,7 @@ public class ClientOTPeerImpl implements OTPeer {
         .set(MessageParts.Value, OpDto.fromOperation(operation))
         .sendNowWith(bus);
 
-    lastSentSequences.put(operation.getEntityId(), operation.getRevision());
+    lastSentSequences.put(operation.getEntityId(), operation.getRevisionHash());
   }
 
   @Override
@@ -80,8 +80,7 @@ public class ClientOTPeerImpl implements OTPeer {
   }
 
   @Override
-  public int getLastTransmittedSequence(Integer entity) {
-    final Integer seq = lastSentSequences.get(entity);
-    return seq == null ? 0 : seq;
+  public String getLastTransmittedHash(Integer entity) {
+    return lastSentSequences.get(entity);
   }
 }
