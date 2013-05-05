@@ -38,7 +38,7 @@ import java.util.Set;
 public abstract class AbstractOTEngine implements OTEngine {
   protected final String engineId;
   protected final PeerState peerState;
-  protected final OTEntityState entityState = new OTEntityStateImpl();
+  protected final OTEntityState entityState = new OTEntityStateImpl(this);
   protected volatile OTEngineMode mode = OTEngineMode.Offline;
   protected String name;
 
@@ -56,6 +56,8 @@ public abstract class AbstractOTEngine implements OTEngine {
   protected OTOperation applyFromRemote(final OTOperation remoteOp) {
     final OTEntity entity = getEntityStateSpace().getEntity(remoteOp.getEntityId());
     getPeerState().flushEntityStreams(entity.getId());
+
+    entity.getTransactionLog().appendRemoteLog(remoteOp.getAgentId(), remoteOp);
 
     if (peerState.hasConflictResolutionPrecedence()) {
       return Transformer.createTransformerLocalPrecedence(this, entity, remoteOp).transform();
@@ -90,7 +92,7 @@ public abstract class AbstractOTEngine implements OTEngine {
       @SuppressWarnings("unchecked")
       @Override
       public void receive(final State obj) {
-        final OTEntity newEntity = new OTEntityImpl(entityId, obj);
+        final OTEntity newEntity = new OTEntityImpl(AbstractOTEngine.this, entityId, obj);
         entityState.addEntity(newEntity);
         getPeerState().associateEntity(peer, entityId);
       }
@@ -258,7 +260,7 @@ public abstract class AbstractOTEngine implements OTEngine {
 
         @Override
         public OTOperation build() {
-          return OTOperationImpl.createOperation(otEngine, mutationList, entity.getId(), -1, null, null);
+          return OTOperationImpl.createOperation(otEngine, mutationList, entity.getId(), otEngine.getId(), -1, null, null);
         }
       };
     }

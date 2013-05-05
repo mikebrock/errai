@@ -85,6 +85,11 @@ public class CharacterMutation implements Mutation<StringState, Character> {
   }
 
   @Override
+  public Mutation<StringState, Character> combineWith(Mutation<StringState, Character> combine) {
+    return null;
+  }
+
+  @Override
   public String toString() {
     if (getData() == null || getData() == 0) {
       return type.getShortName() + "[" + getPosition() + "]";

@@ -31,6 +31,7 @@ import java.util.List;
 public class OpDto {
   private int revisionId;
   private int entityId;
+  private String agentId;
   private String hash;
   private List<Mutation> mutations;
   private OpPairDto opPairDto;
@@ -41,6 +42,7 @@ public class OpDto {
     dto.hash = operation.getRevisionHash();
     dto.revisionId = operation.getRevision();
     dto.mutations = operation.getMutations();
+    dto.agentId = operation.getAgentId();
 
     if (operation.getTransformedFrom() != null) {
       dto.opPairDto = new OpPairDto(fromOperation(operation.getTransformedFrom().getRemoteOp()),
@@ -64,6 +66,14 @@ public class OpDto {
 
   public void setEntityId(int entityId) {
     this.entityId = entityId;
+  }
+
+  public String getAgentId() {
+    return agentId;
+  }
+
+  public void setAgentId(String agentId) {
+    this.agentId = agentId;
   }
 
   public String getHash() {
@@ -92,6 +102,6 @@ public class OpDto {
       opPair = this.opPairDto.toOpPair(engine);
     }
 
-    return OTOperationImpl.createOperation(engine, mutations, entityId, revisionId, hash, opPair);
+    return OTOperationImpl.createOperation(engine, mutations, entityId, agentId, revisionId, hash, opPair);
   }
 }

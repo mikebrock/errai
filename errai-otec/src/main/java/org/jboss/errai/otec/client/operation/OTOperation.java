@@ -33,6 +33,8 @@ public interface OTOperation {
 
   int getRevision();
 
+  String getAgentId();
+
   String getRevisionHash();
   
   boolean shouldPropagate();
@@ -54,4 +56,12 @@ public interface OTOperation {
   void markAsResolvedConflict();
   
   OpPair getTransformedFrom();
+
+  void setOuterTransformedPath(OTOperation operation);
+
+  OTOperation getOuterTransformedPath();
+
+  int getUpdatesRevision();
+
+  void setUpdatesRevision(int updatesRevision);
 }

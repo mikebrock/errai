@@ -69,7 +69,7 @@ public abstract class AbstractMockPeer implements OTPeer {
                                     final EntitySyncCompletionCallback<State> callback) {
 
     final OTEntity entity = remoteEngine.getEntityStateSpace().getEntity(entityId);
-    localEngine.getEntityStateSpace().addEntity(new OTTestEntity(entity));
+    localEngine.getEntityStateSpace().addEntity(new OTTestEntity(localEngine, entity));
 
     OTLogUtil.log("SYNC", "",
         remoteEngine.getName(),

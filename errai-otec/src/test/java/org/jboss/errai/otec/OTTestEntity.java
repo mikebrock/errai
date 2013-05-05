@@ -16,6 +16,7 @@
 
 package org.jboss.errai.otec;
 
+import org.jboss.errai.otec.client.OTEngine;
 import org.jboss.errai.otec.client.OTEntity;
 import org.jboss.errai.otec.client.OTEntityImpl;
 import org.jboss.errai.otec.client.StringState;
@@ -29,14 +30,14 @@ import org.jboss.errai.otec.client.operation.OTOperationImpl;
  */
 @SuppressWarnings("unchecked")
 public class OTTestEntity extends OTEntityImpl {
-  public OTTestEntity(final OTEntity entity) {
-    super(entity.getId(), StringState.of(((String) entity.getState().get())));
+  public OTTestEntity(final OTEngine engine, final OTEntity entity) {
+    super(engine, entity.getId(), StringState.of(((String) entity.getState().get())));
 
     final TransactionLog transactionLog = entity.getTransactionLog();
     for (final OTOperation operation : transactionLog.getLog()) {
       getTransactionLog().appendLog(
           OTOperationImpl.createOperation(operation.getEngine(), operation.getMutations(), operation.getEntityId(),
-              operation.getRevision(), operation.getRevisionHash(), operation.getTransformedFrom()));
+              operation.getAgentId(), operation.getRevision(), operation.getRevisionHash(), operation.getTransformedFrom()));
     }
 
     setRevision(entity.getRevision());

@@ -16,17 +16,19 @@
 
 package org.jboss.errai.otec.client;
 
+import static java.util.Collections.singletonList;
 import static org.jboss.errai.otec.client.operation.OTOperationImpl.createLocalOnlyOperation;
+import static org.jboss.errai.otec.client.operation.OTOperationImpl.createOperation;
 
 import org.jboss.errai.otec.client.mutation.CharacterMutation;
 import org.jboss.errai.otec.client.mutation.Mutation;
 import org.jboss.errai.otec.client.mutation.MutationType;
 import org.jboss.errai.otec.client.operation.OTOperation;
-import org.jboss.errai.otec.client.operation.OTOperationImpl;
 import org.jboss.errai.otec.client.operation.OpPair;
 import org.jboss.errai.otec.client.util.OTLogUtil;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -64,7 +66,7 @@ public class Transformer {
     final TransactionLog transactionLog = entity.getTransactionLog();
     final List<OTOperation> localOps;
     try {
-      localOps = transactionLog.getLogFromId(remoteOp.getRevision(), false);
+      localOps = transactionLog.getLogFromId(remoteOp.getRevision(), true);
     }
     catch (OTException e) {
       //LogUtil.log("failed while trying to transform: " + remoteOp + " rev:" + remoteOp.getRevision());
@@ -72,7 +74,7 @@ public class Transformer {
     }
 
     if (localOps.isEmpty()) {
-      OTOperationImpl.createOperation(remoteOp).apply(entity);
+      createOperation(remoteOp).apply(entity);
       return remoteOp;
     }
     else {
@@ -92,17 +94,109 @@ public class Transformer {
       boolean first = true;
       boolean appliedRemoteOp = false;
       OTOperation applyOver = remoteOp;
-      for (final OTOperation localOp : localOps) {
+      for (OTOperation localOp : localOps) {
+      //  localOp = localOp.getOuterTransformedPath();
         if (first) {
           first = false;
           if (applyOver.getRevisionHash().equals(localOp.getRevisionHash()) || localOp.isResolvedConflict()) {
             applyOver = transform(applyOver, localOp);
           }
           else {
-        //    LogUtil.log("DIAMOND_RESOLVE: applyOver=" + applyOver.toString() + "; localOp=" + localOp + "; localOp.transformedFrom=" + localOp.getTransformedFrom());
+            //  LogUtil.log("DIAMOND_RESOLVE: applyOver=" + applyOver.toString() + "; localOp=" + localOp + "; localOp.transformedFrom=" + localOp.getTransformedFrom());
 
-            applyOver = transform(applyOver,
-                transform(localOp.getTransformedFrom().getLocalOp(), localOp.getTransformedFrom().getRemoteOp()));
+            final TransactionQueryResult commonParentsFor = transactionLog.findCommonParentsFor(applyOver);
+            //  final OTOperation outerTransformedPath = localOp.getOuterTransformedPath();
+            if (false && commonParentsFor != null) {
+              final Collection<OTOperation> operations = opCombinitator(localOps);
+
+              boolean breakOuterLoop = false;
+              if (operations.size() == 1) {
+                final OTOperation next = operations.iterator().next();
+                localOp.setOuterTransformedPath(next);
+                localOp = next;
+
+                breakOuterLoop = true;
+              }
+
+              entity.getState().syncStateFrom(commonParentsFor.getEffectiveCommonState());
+              entity.resetRevisionCounterTo(entity.getRevision() + 1);
+
+              // can we collapse the conflict down to single ops?
+              final Collection<OTOperation> needsReplay = opCombinitator(commonParentsFor.getNeedsTransformLocal());
+              final Collection<OTOperation> otOperations = opCombinitator(commonParentsFor.getNeedsTransformRemote());
+
+              if (otOperations.size() == 1 && needsReplay.size() == 1) {
+                final OTOperation localReplayCombined = needsReplay.iterator().next();
+                final OTOperation remoteReplayCombined = otOperations.iterator().next();
+
+                for (final OTOperation operation : commonParentsFor.getNeedsTransformRemote()) {
+                  operation.markAsResolvedConflict();
+                }
+                for (final OTOperation operation : commonParentsFor.getNeedsTransformLocal()) {
+                  operation.markAsResolvedConflict();
+                }
+
+                applyOver = transform(remoteReplayCombined, localReplayCombined);
+
+                if (!remoteWins) {
+                  final OTOperation ot = transform(remoteReplayCombined, localOp);
+                  ot.apply(entity);
+                  localReplayCombined.apply(entity);
+                  localOp.apply(entity);
+                }
+                else {
+                  final OTOperation ot = transform(localOp, applyOver);
+
+                  localReplayCombined.apply(entity);
+                  applyOver.apply(entity);
+                  ot.apply(entity);
+
+                  applyOver.markAsResolvedConflict();
+                  applyOver.setUpdatesRevision(commonParentsFor.getCommonRemote().getRevision());
+                }
+
+                appliedRemoteOp = true;
+
+                System.out.println("ADVANCED RESOLVE");
+
+                if (breakOuterLoop) {
+                  break;
+                }
+
+//
+//
+//                // yay!
+//
+//
+////                final boolean confictRes = engine.getPeerState().hasConflictResolutionPrecedence();
+////                if (!confictRes) {
+////                OTOperationImpl.createOperation(localOp).apply(entity);
+////                }
+//                applyOver = transform(otOperations.iterator().next(), localOp);
+//                if (operations.size() == 1) {
+//                  final OTOperation ot = transform(localOp, applyOver);
+//                  if (!localOp.equals(ot)) {
+//                    applyOver.apply(entity);
+//                  }
+//
+//                  applyOver = transform(applyOver, ot);
+//                  ot.apply(entity);
+//
+//                  appliedRemoteOp = true;
+//                }
+              }
+              else {
+                applyOver = transform(applyOver,
+                    transform(localOp.getTransformedFrom().getLocalOp(),
+                        localOp.getTransformedFrom().getRemoteOp()));
+             //   System.out.println("UH OH!");
+              }
+            }
+            else {
+              applyOver = transform(applyOver,
+                  transform(localOp.getTransformedFrom().getLocalOp(),
+                      localOp.getTransformedFrom().getRemoteOp()));
+            }
           }
         }
         else {
@@ -119,7 +213,7 @@ public class Transformer {
       }
 
       if (!appliedRemoteOp) {
-        applyOver = OTOperationImpl.createOperation(applyOver);
+        applyOver = createOperation(applyOver);
         applyOver.apply(entity);
       }
 
@@ -133,6 +227,11 @@ public class Transformer {
   }
 
   private OTOperation transform(final OTOperation remoteOp, final OTOperation localOp) {
+    return transform(remoteOp, localOp, false);
+  }
+
+  private OTOperation transform(final OTOperation remoteOp, final OTOperation localOp, final boolean invertRule) {
+    final boolean remoteWins = invertRule ? !this.remoteWins : this.remoteWins;
     final OTOperation transformedOp;
     final List<Mutation> remoteMutations = remoteOp.getMutations();
     final List<Mutation> localMutations = localOp.getMutations();
@@ -178,7 +277,8 @@ public class Transformer {
               transactionLog.markDirty();
               final Mutation mutation = lm.newBasedOn(rm.getPosition());
               mutation.apply(rewind);
-              final OTOperation localOnlyOperation = createLocalOnlyOperation(engine, Collections.singletonList(mutation), entity, localOp.getRevision(), OpPair.of(remoteOp, localOp));
+              final OTOperation localOnlyOperation
+                  = createLocalOnlyOperation(engine, singletonList(mutation), entity, localOp.getRevision(), OpPair.of(remoteOp, localOp));
               transactionLog.insertLog(localOp.getRevision(), localOnlyOperation);
 
               entity.getState().syncStateFrom(rewind);
@@ -199,7 +299,6 @@ public class Transformer {
               continue;
             }
           }
-
         }
 
         if (rm.getType() != MutationType.Noop) {
@@ -251,7 +350,7 @@ public class Transformer {
                   entity.getState().syncStateFrom(rewind);
 
                   transactionLog.insertLog(remoteOp.getRevision(),
-                      createLocalOnlyOperation(engine, Collections.singletonList(mutation), entity, remoteOp.getRevision(), OpPair.of(remoteOp, localOp)));
+                      createLocalOnlyOperation(engine, singletonList(mutation), entity, remoteOp.getRevision(), OpPair.of(remoteOp, localOp)));
                   transformedMutations.add(lm.newBasedOn(mutation.getPosition() + rm.length()));
 
                   continue;
@@ -298,8 +397,14 @@ public class Transformer {
     }
 
     transformedOp =
-        createLocalOnlyOperation(engine, transformedMutations, entity,
-            OpPair.of(remoteOp, localOp));
+        createLocalOnlyOperation(
+            engine,
+            transformedMutations,
+            entity,
+            remoteOp.getAgentId(),
+            remoteOp.getRevisionHash(),
+            OpPair.of(remoteOp, localOp)
+        );
 
     if (resolvesConflict || remoteOp.isResolvedConflict()) {
       transformedOp.markAsResolvedConflict();
@@ -315,11 +420,11 @@ public class Transformer {
     return transformedOp;
   }
 
+  static final CharacterMutation paddedMutation = CharacterMutation.noop(0);
+
   private static Iterator<Mutation> noopPaddedIterator(final List<Mutation> mutationList, final int largerSize) {
     return new Iterator<Mutation>() {
       int pos = 0;
-      final CharacterMutation paddedMutation = CharacterMutation.noop(mutationList.get(mutationList.size() - 1)
-          .getPosition());
       final Iterator<Mutation> iteratorDelegate = mutationList.iterator();
 
       @Override
@@ -342,6 +447,63 @@ public class Transformer {
         throw new UnsupportedOperationException();
       }
     };
+  }
+
+  private Collection<OTOperation> opCombinitator(List<OTOperation> toCombine) {
+    if (toCombine.size() == 1) {
+      return toCombine;
+    }
+
+    final List<Mutation> mutationList = new ArrayList<Mutation>();
+    for (final OTOperation op : toCombine) {
+      mutationList.addAll(op.getMutations());
+    }
+
+    final Mutation combined = mutationCombinitator(mutationList);
+
+    if (combined == null) {
+      return toCombine;
+    }
+    else {
+         final List<OTOperation> combinedOps = new ArrayList<OTOperation>();
+         combinedOps.add(toCombine.get(0));
+      final OTOperation operation
+          = createOperation(engine,
+          singletonList(combined),
+          entity.getId(),
+          remoteOp.getAgentId(),
+          -1,
+          toCombine.get(0).getRevisionHash());
+
+      return Collections.singletonList(operation);
+      //   combinedOps.add(operation);
+//
+//      for (int i = 2; i < toCombine.size(); i++) {
+//        combinedOps.add(createNoop(engine, entity));
+//      }
+
+//      System.out.println("***COMBINED:" + combined);
+//
+      //     return combinedOps;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Mutation mutationCombinitator(final Collection<Mutation> toCombine) {
+    Mutation last = null;
+    for (final Mutation m : toCombine) {
+      if (last != null) {
+        last = m.combineWith(last);
+        if (last == null) {
+          return null;
+        }
+      }
+      else {
+        last = m;
+      }
+    }
+
+    return last;
   }
 
   private Mutation adjustMutationToIndex(int idx, Mutation mutation) {

@@ -41,9 +41,19 @@ public interface TransactionLog {
 
   int purgeTo(int revision);
 
-  void pruneFromOperation(OTOperation operation);
+  List<OTOperation> pruneFromOperation(OTOperation operation);
+
+  public void appendRemoteLog(String remotePeerId, OTOperation operation);
+
+  public List<OTOperation> getRemoteLogFromId(String remotePeerId, int revision, boolean includeNonCanon);
+
+  State getEffectiveStateForRemoteRevision(String remotePeerId, int revision);
 
   void markDirty();
 
   void cleanLog();
+
+  void logDebugDump();
+
+  TransactionQueryResult findCommonParentsFor(OTOperation remoteOp);
 }

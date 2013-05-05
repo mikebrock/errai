@@ -33,7 +33,7 @@ import java.util.List;
  * @author Christian Sadilek <csadilek@redhat.com>
  */
 public class MockOTEngine implements OTEngine {
-  protected final OTEntityState entityState = new OTEntityStateImpl();
+  protected final OTEntityState entityState = new OTEntityStateImpl(this);
   private final List<OTOperation> notifiedOps = new ArrayList<OTOperation>();
 
   @Override

@@ -27,6 +27,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OTEntityStateImpl implements OTEntityState {
   private volatile int entityIdCounter = 0;
   private final Map<Integer, OTEntity> entityMap = new ConcurrentHashMap<Integer, OTEntity>();
+  private final OTEngine engine;
+
+  public OTEntityStateImpl(OTEngine engine) {
+    this.engine = engine;
+  }
 
   @Override
   public OTEntity getEntity(final int id) {
@@ -36,7 +41,7 @@ public class OTEntityStateImpl implements OTEntityState {
   @SuppressWarnings("unchecked")
   @Override
   public OTEntity addEntity(final State objectReference) {
-    final OTEntityImpl entity = new OTEntityImpl(nextEntityId(), objectReference);
+    final OTEntityImpl entity = new OTEntityImpl(engine, nextEntityId(), objectReference);
     addEntity(entity);
     return entity;
   }

@@ -29,10 +29,10 @@ public class OTEntityImpl<T extends State> implements OTEntity<T>, Cloneable {
 
   private final TransactionLog transactionLog;
 
-  public OTEntityImpl(final int entityId, final T entity) {
+  public OTEntityImpl(final OTEngine engine, final int entityId, final T entity) {
     this.entityId = entityId;
     this.entity = entity;
-    this.transactionLog = TransactionLogImpl.createTransactionLog(this);
+    this.transactionLog = TransactionLogImpl.createTransactionLog(engine, this);
   }
 
   @Override
@@ -43,7 +43,7 @@ public class OTEntityImpl<T extends State> implements OTEntity<T>, Cloneable {
   @Override
   public void setRevision(final int revision) {
     this.revision = revision;
-    //   this.revisionCounter = revision;
+//    this.revisionCounter = revision;
   }
 
   @Override

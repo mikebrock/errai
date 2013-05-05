@@ -27,7 +27,7 @@ public class ClientOTBusService {
         }
         else {
           final OTOperation remoteOp = opDto.otOperation(engine);
-          LogUtil.log("RECV:" + remoteOp);
+          LogUtil.log("RECV:" + remoteOp + " ;rev=" + remoteOp.getRevision());
           engine.receive("<ServerEngine>", remoteOp);
         }
       }

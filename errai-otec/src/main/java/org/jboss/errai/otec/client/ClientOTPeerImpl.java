@@ -66,7 +66,7 @@ public class ClientOTPeerImpl implements OTPeer {
         .set(MessageParts.PriorityProcessing, "1")
         .sendNowWith(bus);
 
-    LogUtil.log("TRANSMIT:" + operation);
+    LogUtil.log("TX:" + operation);
 
     lastSentSequences.put(operation.getEntityId(), operation.getRevision());
   }

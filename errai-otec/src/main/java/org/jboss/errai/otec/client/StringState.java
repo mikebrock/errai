@@ -16,6 +16,7 @@
 
 package org.jboss.errai.otec.client;
 
+import org.jboss.errai.common.client.util.LogUtil;
 import org.jboss.errai.otec.client.util.Md5Digest;
 
 import java.util.LinkedList;
@@ -67,6 +68,9 @@ public class StringState implements State<String> {
       notifyStateChangeListeners(pos, data.length());
     }
     catch (StringIndexOutOfBoundsException e) {
+      LogUtil.log("failed to insert data at " + pos + " (length of state: "
+          + buffer.length() + ")::\"" + buffer.toString() + "\"");
+      throw new OTException("FAIL: insert(" + pos + ",\"" + data + "\") currState=\"" + buffer.toString() + "\"");
     }
   }
 
@@ -83,6 +87,9 @@ public class StringState implements State<String> {
       notifyStateChangeListeners(pos, -length);
     }
     catch (StringIndexOutOfBoundsException e) {
+      LogUtil.log("failed to delete data at " + pos + " (length of state: "
+          + buffer.length() + ")::\"" + buffer.toString() + "\"");
+      throw new OTException("FAIL: delete(" + pos + "," + length + ") currState=\"" + buffer.toString() + "\"");
     }
   }
 
@@ -149,7 +156,7 @@ public class StringState implements State<String> {
     stateChangeListeners.add(stateChangeListener);
   }
 
-  private static String createHashFor(final String string) {
+  public static String createHashFor(final String string) {
     try {
       final Md5Digest digest = new Md5Digest();
       digest.update(string.getBytes("UTF-8"));

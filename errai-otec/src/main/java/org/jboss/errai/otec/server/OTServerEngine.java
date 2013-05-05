@@ -112,7 +112,7 @@ public class OTServerEngine extends AbstractOTEngine {
             }
 
             if (lastKnown != -1) {
-              final int i = otEntity.getTransactionLog().purgeTo(lastKnown - 100);
+              final int i = otEntity.getTransactionLog().purgeTo(lastKnown - 100 );
               if (i > 0) {
                 System.out.println("purged " + i + " old entries from transaction log.");
                 for (final OTPeer otPeer : peersFor) {
@@ -195,7 +195,7 @@ public class OTServerEngine extends AbstractOTEngine {
     }
 
 
-    System.out.println("RECV:" + remoteOp + ";rev:" + remoteOp.getRevision() + ";peerId=" + peerId);
+   // System.out.println("RECV:" + remoteOp + ";rev:" + remoteOp.getRevision() + ";peerId=" + peerId);
 
     // System.out.println("ADD_TO_QUEUE:" + remoteOp + ":rev:" + remoteOp.getRevision());
 

@@ -70,6 +70,8 @@ public class ServerOTPeerImpl implements OTPeer {
         .set(MessageParts.PriorityProcessing, "1")
         .sendNowWith(bus);
 
+    System.out.println("TX: " + operation  + " (toPeer=" + queueId + ")");
+
     getPeerData(operation.getEntityId()).setLastKnownTransmittedSequence(operation.getRevision());
   }
 
