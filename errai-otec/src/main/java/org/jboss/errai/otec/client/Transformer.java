@@ -106,7 +106,7 @@ public class Transformer {
 
             final TransactionQueryResult commonParentsFor = transactionLog.findCommonParentsFor(applyOver);
             //  final OTOperation outerTransformedPath = localOp.getOuterTransformedPath();
-            if (false && commonParentsFor != null) {
+            if (commonParentsFor != null) {
               final Collection<OTOperation> operations = opCombinitator(localOps);
 
               boolean breakOuterLoop = false;
